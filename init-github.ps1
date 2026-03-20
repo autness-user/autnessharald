@@ -101,8 +101,19 @@ if (-not $existing) {
     Write-Host "Remoto 'origin' atualizado para: $RemoteUrl"
 }
 
-# Push
+# Sincroniza com o remoto antes de fazer push (evita rejeição por histórico divergente)
 & $Script:GitCmd branch -M $Branch
+$remoteExists = & $Script:GitCmd ls-remote --heads origin $Branch 2>$null
+if ($remoteExists) {
+    Write-Host "Ramo remoto detectado, sincronizando com rebase..."
+    & $Script:GitCmd fetch origin $Branch
+    & $Script:GitCmd pull --rebase origin $Branch
+}
+
 Write-Host "Fazendo push para $Branch..."
 & $Script:GitCmd push -u origin $Branch
-Write-Host "Push finalizado."
+if ($LASTEXITCODE -ne 0) {
+    Write-Error "Falha no push (código $LASTEXITCODE). Verifique permissões e conflitos."
+    exit $LASTEXITCODE
+}
+Write-Host "Push finalizado com sucesso."
