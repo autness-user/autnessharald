@@ -24,6 +24,9 @@ param(
     [Parameter(Mandatory=$false, HelpMessage="Nome do ramo principal. Padrão: main")]
     [string]$Branch = 'main',
 
+    [Parameter(Mandatory=$false, HelpMessage="Mensagem do commit. Padrão: Atualização do backend")]
+    [string]$CommitMessage = 'Atualização do backend',
+
     [Parameter(Mandatory=$false, HelpMessage="Caminho completo para git.exe (opcional)")]
     [string]$GitPath = ''
 )
@@ -85,7 +88,7 @@ Ensure-GitRepo
 $dirty = & $Script:GitCmd status --porcelain
 if ($dirty) {
     & $Script:GitCmd add .
-    & $Script:GitCmd commit -m "Initial commit" -q
+    & $Script:GitCmd commit -m $CommitMessage -q
     Write-Host "Commit criado."
 } else {
     Write-Host "Nenhuma alteração a commitar."

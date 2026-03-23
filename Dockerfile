@@ -4,6 +4,7 @@ WORKDIR /app
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=/app \
     HOST=0.0.0.0 \
     PORT=8000 \
     DEBUG=0
@@ -19,4 +20,4 @@ COPY . .
 
 EXPOSE 8000
 
-CMD ["python", "main.py"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

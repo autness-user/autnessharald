@@ -7,6 +7,7 @@ from app.schemas.google_sheets import (
     WorksheetDataResponse,
 )
 from app.services.google_sheets_service import GoogleSheetsService
+from app.services.public_sheets_service import PublicSheetsService
 
 router = APIRouter()
 
@@ -26,8 +27,22 @@ def spreadsheet_meta() -> SpreadsheetMetaResponse:
 
 @router.get("/worksheet", response_model=WorksheetDataResponse)
 def worksheet_data(sheet_name: str = Query(..., description="Nome da aba")) -> WorksheetDataResponse:
-    values = _service().get_sheet_values(sheet_name)
-    return WorksheetDataResponse(sheet_name=sheet_name, rows=values)
+    try:
+        values = _service().get_sheet_values(sheet_name)
+        return WorksheetDataResponse(sheet_name=sheet_name, rows=values)
+    except HTTPException:
+        pass
+    except Exception:
+        pass
+
+    try:
+        values = PublicSheetsService().fetch_sheet_values_by_name(sheet_name)
+        return WorksheetDataResponse(sheet_name=sheet_name, rows=values)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Falha ao consultar aba pública '{sheet_name}' sem credenciais: {exc}",
+        ) from exc
 
 
 @router.post("/append", response_model=AppendRowResponse)
