@@ -24,7 +24,7 @@ class Settings(BaseSettings):
 
     LOG_LEVEL: str = "INFO"
 
-    WATSONX_THREADS_API_BASE_URL: str = ""
+    WATSONX_THREADS_API_BASE_URL: str = "https://api.us-south.watson-orchestrate.cloud.ibm.com/instances/dbf3a3d1-2d3d-4474-a5fe-cc39180b9e5a"
     WATSONX_THREADS_DELETE_PATH_TEMPLATE: str = "/v1/threads/{thread_id}"
     WATSONX_THREADS_TIMEOUT_SECONDS: int = 30
     WATSONX_BEARER_TOKEN: str = ""
