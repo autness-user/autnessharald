@@ -42,7 +42,7 @@ class WatsonxThreadsService:
             "soft_delete": soft_delete,
         }
 
-        response = requests.delete(
+        response = requests.post(
             url,
             headers=self._headers(),
             json=payload,
