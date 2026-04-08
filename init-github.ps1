@@ -101,7 +101,7 @@ function Invoke-Git {
     }
 
     try {
-        $output = & $Script:GitCmd @Args 2>&1
+        $output = & $Script:GitCmd @Args
         $exitCode = $LASTEXITCODE
     }
     finally {
@@ -133,7 +133,7 @@ function Invoke-GitCapture {
     }
 
     try {
-        $output = & $Script:GitCmd @Args 2>&1
+        $output = & $Script:GitCmd @Args
         $exitCode = $LASTEXITCODE
     }
     finally {
