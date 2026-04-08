@@ -94,13 +94,29 @@ function Invoke-Git {
         [string]$ErrorMessage = "Comando git falhou"
     )
 
-    $output = & $Script:GitCmd @Args 2>&1
-    if ($LASTEXITCODE -ne 0) {
+    $hasNativePreference = $null -ne (Get-Variable -Name PSNativeCommandUseErrorActionPreference -ErrorAction SilentlyContinue)
+    if ($hasNativePreference) {
+        $previousNativePreference = $PSNativeCommandUseErrorActionPreference
+        $PSNativeCommandUseErrorActionPreference = $false
+    }
+
+    try {
+        $output = & $Script:GitCmd @Args 2>&1
+        $exitCode = $LASTEXITCODE
+    }
+    finally {
+        if ($hasNativePreference) {
+            $PSNativeCommandUseErrorActionPreference = $previousNativePreference
+        }
+    }
+
+    if ($exitCode -ne 0) {
         if ($output) {
             Write-Host ($output -join [Environment]::NewLine)
         }
-        Fail "$ErrorMessage (codigo $LASTEXITCODE)."
+        Fail "$ErrorMessage (codigo $exitCode)."
     }
+
     return $output
 }
 
