@@ -24,6 +24,15 @@ class Settings(BaseSettings):
 
     LOG_LEVEL: str = "INFO"
 
+    WATSONX_THREADS_API_BASE_URL: str = ""
+    WATSONX_THREADS_DELETE_PATH_TEMPLATE: str = "/v1/threads/{thread_id}"
+    WATSONX_THREADS_TIMEOUT_SECONDS: int = 30
+    WATSONX_BEARER_TOKEN: str = ""
+    WATSONX_API_KEY: str = ""
+    WATSONX_API_KEY_HEADER: str = "x-api-key"
+    WATSONX_PROJECT_ID: str = ""
+    WHATSAPP_THREAD_MAPPING_PATH: str = "data/whatsapp_thread_mapping.json"
+
     class Config:
         env_file = ".env"
         case_sensitive = True

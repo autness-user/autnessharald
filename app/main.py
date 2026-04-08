@@ -4,6 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.sheets import router as sheets_router
 from app.api.performance import router as performance_router
 from app.api.public_sheets import router as public_sheets_router
+from app.api.chat_threads import router as chat_threads_router
+from app.api.whatsapp import router as whatsapp_router
 from config.settings import settings
 
 
@@ -34,3 +36,5 @@ def health() -> dict:
 app.include_router(sheets_router, prefix="/sheets", tags=["Sheets"])
 app.include_router(performance_router, prefix="/performance", tags=["Performance"])
 app.include_router(public_sheets_router, prefix="/public-sheets", tags=["Public Sheets"])
+app.include_router(chat_threads_router, prefix="/chat-threads", tags=["Chat Threads"])
+app.include_router(whatsapp_router, prefix="/whatsapp", tags=["WhatsApp"])
