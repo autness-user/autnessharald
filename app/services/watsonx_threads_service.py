@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta
 from typing import Any, Dict, Tuple
 
 import requests
 
+from app.utils.logger import get_logger
 from config.settings import settings
+
+
+logger = get_logger(__name__)
 
 
 class WatsonxThreadsService:
@@ -15,6 +20,38 @@ class WatsonxThreadsService:
         self.base_url = settings.WATSONX_THREADS_API_BASE_URL.rstrip("/")
         self.path_template = settings.WATSONX_THREADS_DELETE_PATH_TEMPLATE
         self.timeout_seconds = settings.WATSONX_THREADS_TIMEOUT_SECONDS
+        self.api_key = settings.WATSONX_API_KEY
+        self.access_token: str | None = None
+        self.token_expiry: datetime | None = None
+
+    def _get_iam_token(self) -> str:
+        if self.access_token and self.token_expiry and datetime.now() < self.token_expiry:
+            return self.access_token
+
+        if not self.api_key:
+            raise ValueError("WATSONX_API_KEY nao configurado para obter token IAM")
+
+        response = requests.post(
+            "https://iam.cloud.ibm.com/identity/token",
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Accept": "application/json",
+            },
+            data={
+                "grant_type": "urn:ibm:params:oauth:grant-type:apikey",
+                "apikey": self.api_key,
+            },
+            timeout=30,
+        )
+        response.raise_for_status()
+
+        token_data = response.json()
+        self.access_token = token_data["access_token"]
+        expires_in = token_data.get("expires_in", 3600)
+        self.token_expiry = datetime.now() + timedelta(seconds=expires_in - 300)
+
+        logger.info("Token IAM obtido com sucesso")
+        return self.access_token
 
     def _headers(self) -> Dict[str, str]:
         headers = {
@@ -22,7 +59,9 @@ class WatsonxThreadsService:
             "Content-Type": "application/json",
         }
 
-        if settings.WATSONX_BEARER_TOKEN:
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self._get_iam_token()}"
+        elif settings.WATSONX_BEARER_TOKEN:
             headers["Authorization"] = f"Bearer {settings.WATSONX_BEARER_TOKEN}"
 
         if settings.WATSONX_API_KEY:
