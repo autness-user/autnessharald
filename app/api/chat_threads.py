@@ -22,6 +22,15 @@ def delete_thread(
             channel=payload.channel,
             soft_delete=payload.soft_delete,
         )
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "message": "Falha ao autenticar no IAM antes de chamar o provedor",
+                "thread_id": thread_id,
+                "error": str(exc),
+            },
+        ) from exc
     except ValueError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
     except Exception as exc:

@@ -31,27 +31,31 @@ class WatsonxThreadsService:
         if not self.api_key:
             raise ValueError("WATSONX_API_KEY nao configurado para obter token IAM")
 
-        response = requests.post(
-            "https://iam.cloud.ibm.com/identity/token",
-            headers={
-                "Content-Type": "application/x-www-form-urlencoded",
-                "Accept": "application/json",
-            },
-            data={
-                "grant_type": "urn:ibm:params:oauth:grant-type:apikey",
-                "apikey": self.api_key,
-            },
-            timeout=30,
-        )
-        response.raise_for_status()
+        try:
+            response = requests.post(
+                "https://iam.cloud.ibm.com/identity/token",
+                headers={
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "Accept": "application/json",
+                },
+                data={
+                    "grant_type": "urn:ibm:params:oauth:grant-type:apikey",
+                    "apikey": self.api_key,
+                },
+                timeout=30,
+            )
+            response.raise_for_status()
 
-        token_data = response.json()
-        self.access_token = token_data["access_token"]
-        expires_in = token_data.get("expires_in", 3600)
-        self.token_expiry = datetime.now() + timedelta(seconds=expires_in - 300)
+            token_data = response.json()
+            self.access_token = token_data["access_token"]
+            expires_in = token_data.get("expires_in", 3600)
+            self.token_expiry = datetime.now() + timedelta(seconds=expires_in - 300)
 
-        logger.info("Token IAM obtido com sucesso")
-        return self.access_token
+            logger.info("Token IAM obtido com sucesso")
+            return self.access_token
+        except requests.exceptions.RequestException as exc:
+            logger.error(f"Erro ao obter token IAM: {exc}")
+            raise RuntimeError(f"Falha ao obter token IAM: {exc}") from exc
 
     def _headers(self) -> Dict[str, str]:
         headers = {
