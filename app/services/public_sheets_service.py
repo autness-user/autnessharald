@@ -74,3 +74,22 @@ class PublicSheetsService:
 
         reader = csv.reader(io.StringIO(response.text))
         return [row for row in reader]
+
+    def fetch_sheet_by_name(self, sheet_name: str) -> Tuple[List[str], List[Dict[str, str]]]:
+        """Busca dados de uma aba pública pelo nome, retornando headers e rows como dicts.
+        
+        Returns:
+            Tupla (headers, rows) onde rows é uma lista de dicts com os dados.
+        """
+        url = _GVIZ_CSV_URL.format(spreadsheet_id=self.spreadsheet_id)
+        response = self._session.get(
+            url,
+            params={"tqx": "out:csv", "sheet": sheet_name},
+            timeout=REQUEST_TIMEOUT_SECONDS,
+        )
+        response.raise_for_status()
+
+        reader = csv.DictReader(io.StringIO(response.text))
+        headers: List[str] = list(reader.fieldnames or [])
+        rows: List[Dict[str, str]] = [dict(row) for row in reader]
+        return headers, rows

@@ -28,16 +28,26 @@ def spreadsheet_meta() -> SpreadsheetMetaResponse:
 @router.get("/worksheet", response_model=WorksheetDataResponse)
 def worksheet_data(sheet_name: str = Query(..., description="Nome da aba")) -> WorksheetDataResponse:
     try:
-        values = _service().get_sheet_values(sheet_name)
-        return WorksheetDataResponse(sheet_name=sheet_name, rows=values)
+        data = _service().get_sheet_values(sheet_name)
+        return WorksheetDataResponse(
+            sheet_name=sheet_name,
+            headers=data.get("headers", []),
+            rows=data.get("rows", []),
+            total_rows=len(data.get("rows", []))
+        )
     except HTTPException:
         pass
     except Exception:
         pass
 
     try:
-        values = PublicSheetsService().fetch_sheet_values_by_name(sheet_name)
-        return WorksheetDataResponse(sheet_name=sheet_name, rows=values)
+        headers, rows = PublicSheetsService().fetch_sheet_by_name(sheet_name)
+        return WorksheetDataResponse(
+            sheet_name=sheet_name,
+            headers=headers,
+            rows=rows,
+            total_rows=len(rows)
+        )
     except Exception as exc:
         raise HTTPException(
             status_code=502,

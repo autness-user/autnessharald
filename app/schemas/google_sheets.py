@@ -1,11 +1,13 @@
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
 
 
 class WorksheetDataResponse(BaseModel):
     sheet_name: str
-    rows: List[List[str]]
+    headers: List[str] = []
+    rows: List[Dict[str, Any]] = []
+    total_rows: int = 0
 
 
 class AppendRowRequest(BaseModel):
