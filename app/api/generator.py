@@ -53,12 +53,31 @@ def _build_sheet_example(headers: List[str], rows: List[dict[str, Any]]) -> dict
 
 
 def _fetch_sheet_data(spreadsheet_id: str, sheet_name: str) -> Dict[str, Any]:
+    """Busca dados da planilha, tentando primeiro autenticação e depois fallback público."""
+    from app.utils.logger import get_logger
+    logger = get_logger(__name__)
+
     try:
+        logger.info(f"Tentando buscar dados via autenticação para planilha {spreadsheet_id}, aba '{sheet_name}'")
         service = GoogleSheetsService(spreadsheet_id=spreadsheet_id)
-        return service.get_sheet_values(sheet_name)
-    except Exception:
+        data = service.get_sheet_values(sheet_name)
+        if data.get("rows"):
+            logger.info(f"Dados obtidos via autenticação: {len(data['rows'])} linhas")
+            return data
+        else:
+            logger.warning(f"Nenhum dado retornado via autenticação, tentando fallback público")
+    except Exception as e:
+        logger.warning(f"Falha na autenticação ({e}), tentando fallback público para planilha {spreadsheet_id}")
+
+    try:
+        logger.info(f"Buscando dados via acesso público para aba '{sheet_name}'")
         headers, rows = PublicSheetsService(spreadsheet_id=spreadsheet_id).fetch_sheet_by_name(sheet_name)
+        logger.info(f"Dados obtidos via acesso público: {len(rows)} linhas")
         return {"headers": headers, "rows": rows}
+    except Exception as e:
+        logger.error(f"Falha em ambos os métodos de acesso para aba '{sheet_name}': {e}")
+        # Retorna dados vazios em vez de falhar
+        return {"headers": [], "rows": []}
 
 
 def _generate_openapi_spec(

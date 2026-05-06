@@ -8,6 +8,10 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+from app.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
 SPREADSHEET_ID = "1oQpAdtb4HVLKAKZRIyj8CdrpHYh73FOcHZNuVtgBSSg"
 REQUEST_TIMEOUT_SECONDS = 300
 
@@ -45,18 +49,26 @@ class PublicSheetsService:
         Returns:
             Tupla (headers, rows) onde rows é uma lista de dicts com os dados.
         """
-        url = _EXPORT_URL.format(spreadsheet_id=self.spreadsheet_id)
-        response = self._session.get(
-            url,
-            params={"format": "csv", "gid": gid},
-            timeout=REQUEST_TIMEOUT_SECONDS,
-        )
-        response.raise_for_status()
+        try:
+            url = _EXPORT_URL.format(spreadsheet_id=self.spreadsheet_id)
+            logger.info(f"Buscando aba por GID '{gid}' via export CSV: {url}")
 
-        reader = csv.DictReader(io.StringIO(response.text))
-        headers: List[str] = list(reader.fieldnames or [])
-        rows: List[Dict[str, str]] = [dict(row) for row in reader]
-        return headers, rows
+            response = self._session.get(
+                url,
+                params={"format": "csv", "gid": gid},
+                timeout=REQUEST_TIMEOUT_SECONDS,
+            )
+            response.raise_for_status()
+
+            reader = csv.DictReader(io.StringIO(response.text))
+            headers: List[str] = list(reader.fieldnames or [])
+            rows: List[Dict[str, str]] = [dict(row) for row in reader]
+
+            logger.info(f"Aba GID '{gid}' carregada: {len(headers)} colunas, {len(rows)} linhas")
+            return headers, rows
+        except Exception as e:
+            logger.error(f"Erro ao buscar aba por GID '{gid}': {e}")
+            raise
 
     def fetch_sheet_values_by_name(self, sheet_name: str) -> List[List[str]]:
         """Busca os valores de uma aba pública pelo nome, sem credenciais.
@@ -64,32 +76,49 @@ class PublicSheetsService:
         Retorna no mesmo formato usado por WorksheetDataResponse:
         [headers, row1, row2, ...]
         """
-        url = _GVIZ_CSV_URL.format(spreadsheet_id=self.spreadsheet_id)
-        response = self._session.get(
-            url,
-            params={"tqx": "out:csv", "sheet": sheet_name},
-            timeout=REQUEST_TIMEOUT_SECONDS,
-        )
-        response.raise_for_status()
+        try:
+            url = _GVIZ_CSV_URL.format(spreadsheet_id=self.spreadsheet_id)
+            logger.info(f"Buscando aba '{sheet_name}' via GViz CSV: {url}")
 
-        reader = csv.reader(io.StringIO(response.text))
-        return [row for row in reader]
+            response = self._session.get(
+                url,
+                params={"tqx": "out:csv", "sheet": sheet_name},
+                timeout=REQUEST_TIMEOUT_SECONDS,
+            )
+            response.raise_for_status()
+
+            reader = csv.reader(io.StringIO(response.text))
+            rows = [row for row in reader]
+
+            logger.info(f"Aba '{sheet_name}' carregada via GViz: {len(rows)} linhas brutas")
+            return rows
+        except Exception as e:
+            logger.error(f"Erro ao buscar aba '{sheet_name}' via GViz: {e}")
+            raise
 
     def fetch_sheet_by_name(self, sheet_name: str) -> Tuple[List[str], List[Dict[str, str]]]:
         """Busca dados de uma aba pública pelo nome, retornando headers e rows como dicts.
-        
+
         Returns:
             Tupla (headers, rows) onde rows é uma lista de dicts com os dados.
         """
-        url = _GVIZ_CSV_URL.format(spreadsheet_id=self.spreadsheet_id)
-        response = self._session.get(
-            url,
-            params={"tqx": "out:csv", "sheet": sheet_name},
-            timeout=REQUEST_TIMEOUT_SECONDS,
-        )
-        response.raise_for_status()
+        try:
+            url = _GVIZ_CSV_URL.format(spreadsheet_id=self.spreadsheet_id)
+            logger.info(f"Buscando aba '{sheet_name}' via GViz CSV (dict format): {url}")
 
-        reader = csv.DictReader(io.StringIO(response.text))
-        headers: List[str] = list(reader.fieldnames or [])
-        rows: List[Dict[str, str]] = [dict(row) for row in reader]
-        return headers, rows
+            response = self._session.get(
+                url,
+                params={"tqx": "out:csv", "sheet": sheet_name},
+                timeout=REQUEST_TIMEOUT_SECONDS,
+            )
+            response.raise_for_status()
+
+            reader = csv.DictReader(io.StringIO(response.text))
+            headers: List[str] = list(reader.fieldnames or [])
+            rows: List[Dict[str, str]] = [dict(row) for row in reader]
+
+            logger.info(f"Aba '{sheet_name}' carregada: {len(headers)} colunas, {len(rows)} linhas")
+            return headers, rows
+        except Exception as e:
+            logger.error(f"Erro ao buscar aba '{sheet_name}' via GViz (dict): {e}")
+            raise
