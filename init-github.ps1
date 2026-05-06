@@ -157,11 +157,12 @@ function Ensure-Git {
 
 function Ensure-GitRepo {
     if (-not (Test-Path .git)) {
+        Write-Host "Inicializando repositorio Git..." -ForegroundColor Yellow
         Invoke-Git -Args @('init') -ErrorMessage 'Falha ao inicializar repositorio Git'
-        Write-Host "Repositorio Git inicializado."
+        Write-Host "Repositorio Git inicializado." -ForegroundColor Green
     }
     else {
-        Write-Host "Repositorio Git ja existe."
+        Write-Host "Repositorio Git ja existe." -ForegroundColor Green
     }
 }
 
@@ -213,6 +214,11 @@ function Exclude-UnsafeFromStage {
 
 Set-Location -LiteralPath (Split-Path -Parent $MyInvocation.MyCommand.Path)
 
+Write-Host "=== Script de Publicacao GitHub ===" -ForegroundColor Cyan
+Write-Host "Diretorio atual: $(Get-Location)" -ForegroundColor Gray
+Write-Host "Script: $($MyInvocation.MyCommand.Path)" -ForegroundColor Gray
+Write-Host ""
+
 Ensure-Git
 Ensure-GitRepo
 
@@ -225,11 +231,11 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 if (-not $staged) {
-    Write-Host 'Nenhuma alteracao valida para commit (apenas backups/sensiveis ou sem mudancas).'
-}
-else {
+    Write-Host "Nenhuma alteracao valida para commit (apenas backups/sensiveis ou sem mudancas)." -ForegroundColor Yellow
+} else {
+    Write-Host "Criando commit com mensagem: '$CommitMessage'" -ForegroundColor Cyan
     Invoke-Git -Args @('commit', '-m', $CommitMessage) -ErrorMessage 'Falha ao criar commit'
-    Write-Host 'Commit criado com sucesso.'
+    Write-Host "Commit criado com sucesso." -ForegroundColor Green
 }
 
 $existing = & $Script:GitCmd remote | Where-Object { $_ -eq 'origin' }
@@ -238,26 +244,31 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 if (-not $existing) {
+    Write-Host "Adicionando remoto 'origin': $RemoteUrl" -ForegroundColor Cyan
     Invoke-Git -Args @('remote', 'add', 'origin', $RemoteUrl) -ErrorMessage "Falha ao adicionar remoto origin"
-    Write-Host "Remoto 'origin' adicionado: $RemoteUrl"
+    Write-Host "Remoto 'origin' adicionado." -ForegroundColor Green
 }
 else {
+    Write-Host "Atualizando remoto 'origin' para: $RemoteUrl" -ForegroundColor Cyan
     Invoke-Git -Args @('remote', 'set-url', 'origin', $RemoteUrl) -ErrorMessage "Falha ao atualizar remoto origin"
-    Write-Host "Remoto 'origin' atualizado para: $RemoteUrl"
+    Write-Host "Remoto 'origin' atualizado." -ForegroundColor Green
 }
 
 if (-not $KeepCurrentBranch) {
+    Write-Host "Ajustando branch para '$Branch'" -ForegroundColor Cyan
     Invoke-Git -Args @('branch', '-M', $Branch) -ErrorMessage "Falha ao ajustar branch para $Branch"
+    Write-Host "Branch ajustado para '$Branch'." -ForegroundColor Green
 }
 
 $remoteExists = & $Script:GitCmd ls-remote --heads origin $Branch 2>$null
 if ($LASTEXITCODE -eq 0 -and $remoteExists) {
-    Write-Host "Branch remoto detectado, sincronizando com rebase..."
+    Write-Host "Branch remoto detectado, sincronizando com rebase..." -ForegroundColor Cyan
     Invoke-Git -Args @('fetch', 'origin', $Branch) -ErrorMessage 'Falha no fetch do remoto'
     Invoke-Git -Args @('pull', '--rebase', 'origin', $Branch) -ErrorMessage 'Falha no pull --rebase'
+    Write-Host "Sincronizacao concluida." -ForegroundColor Green
 }
 
-Write-Host "Fazendo push para $Branch..."
+Write-Host "Fazendo push para '$Branch'..." -ForegroundColor Cyan
 $pushAttempt = Invoke-GitCapture -Args @('push', '-u', 'origin', $Branch)
 
 if ($pushAttempt.ExitCode -ne 0) {
@@ -265,16 +276,23 @@ if ($pushAttempt.ExitCode -ne 0) {
     $isSshReadOnly = $pushText -match 'read only' -or $pushText -match 'Could not read from remote repository'
 
     if ($isSshReadOnly -and $HttpsFallbackRemoteUrl) {
-        Write-Host 'Push via SSH falhou com permissao read-only. Tentando fallback para HTTPS...'
+        Write-Host "Push via SSH falhou com permissao read-only. Tentando fallback para HTTPS..." -ForegroundColor Yellow
         Invoke-Git -Args @('remote', 'set-url', 'origin', $HttpsFallbackRemoteUrl) -ErrorMessage 'Falha ao trocar remote para HTTPS'
         Invoke-Git -Args @('push', '-u', 'origin', $Branch) -ErrorMessage 'Falha no push via HTTPS'
+        Write-Host "Push via HTTPS realizado com sucesso." -ForegroundColor Green
     }
     else {
         if ($pushAttempt.Output) {
-            Write-Host $pushText
+            Write-Host "Detalhes do erro:" -ForegroundColor Red
+            Write-Host $pushText -ForegroundColor Red
         }
         Fail "Falha no push (codigo $($pushAttempt.ExitCode))."
     }
 }
 
-Write-Host 'Push finalizado com sucesso.'
+Write-Host "Push finalizado com sucesso!" -ForegroundColor Green
+Write-Host ""
+Write-Host "Resumo:" -ForegroundColor Cyan
+Write-Host "   - Repositorio: $RemoteUrl" -ForegroundColor White
+Write-Host "   - Branch: $Branch" -ForegroundColor White
+Write-Host "   - Commit: $CommitMessage" -ForegroundColor White
